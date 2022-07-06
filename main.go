@@ -124,7 +124,7 @@ func main() {
 			}
 
 			path := GetAppPath() + string(os.PathSeparator) + folderName + string(os.PathSeparator) + k
-			f, err := os.Create(path)
+			f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 			if err != nil {
 				fmt.Println("Create error", err)
 			} else {

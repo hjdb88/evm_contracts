@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -56,7 +57,7 @@ func main() {
 	uri := fmt.Sprintf(urlPattern, address)
 
 	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse("socks5://127.0.0.1:10080")
+		return url.Parse("socks5://127.0.0.1:1080")
 	}
 
 	client := &http.Client{Transport: &http.Transport{Proxy: proxy}}
@@ -101,13 +102,6 @@ func main() {
 			continue
 		}
 
-		folderName := r.ContractName
-		err := os.MkdirAll(folderName, 0777)
-		if err != nil {
-			fmt.Println("MkdirAll error", err)
-			continue
-		}
-
 		sourceCode := r.SourceCode[1 : len(r.SourceCode)-1]
 
 		var contractSource ContractSource
@@ -123,15 +117,8 @@ func main() {
 				k = strings.ReplaceAll(k, "/", string(os.PathSeparator))
 			}
 
-			path := GetAppPath() + string(os.PathSeparator) + folderName + string(os.PathSeparator) + k
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-			if err != nil {
-				fmt.Println("Create error", err)
-			} else {
-				_, err = f.Write([]byte(v.Content))
-				fmt.Println("Write error", err)
-			}
-			f.Close()
+			path := GetAppPath() + string(os.PathSeparator) + r.ContractName + string(os.PathSeparator) + k
+			SaveToFile(path, v.Content)
 		}
 	}
 }
@@ -142,4 +129,24 @@ func GetAppPath() string {
 	index := strings.LastIndex(path, string(os.PathSeparator))
 
 	return path[:index]
+}
+
+func SaveToFile(filePath, data string) {
+	directory := filePath[:strings.LastIndex(filePath, string(os.PathSeparator))]
+	err := os.MkdirAll(directory, 0766)
+	if err != nil {
+		fmt.Println("MkdirAll error", err)
+		return
+	}
+
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Printf("Create file error: %v\n", err)
+		return
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	fmt.Fprintln(w, data)
+	w.Flush()
 }
